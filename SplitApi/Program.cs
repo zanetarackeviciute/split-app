@@ -27,6 +27,25 @@ app.UseSwagger();      // JSON  → /swagger/v1/swagger.json
 app.UseSwaggerUI();    // HTML  → /swagger (+ /swagger/index.html)
 // -------------------------------------------
 
+
+// ------------ GET /groups----------- visos grupes su visa info: nariais ir transakcijos
+app.MapGet("/groups", async (AppDbContext db) =>
+    await db.Groups
+            .Include(g => g.Members)
+            .Include(g => g.Transactions)
+            .ToListAsync());
+
+// ------------ POST /groups----------- nauja grupe is JSON ("title" : "....")
+app.MapPost("/groups", async (AppDbContext db, GroupDto dto) =>
+{
+    var group = new Group {Title = dto.Title};
+    db.Groups.Add(group);
+    await db.SaveChangesAsync();
+    return Results.Created($"/groups/{group.Id}", group);
+});
+
+
+
 // ------------ POST /groups/{id}/members ----------- irasom nauja nari
 app.MapPost("/groups/{id}/members", async (
     int id,
@@ -127,3 +146,4 @@ app.Run();
 // ------------DTO-------------
 public record MemberDto(string Name);
 public record TransactionDto(int PayerId, decimal Amount);
+public record GroupDto(string Title);
