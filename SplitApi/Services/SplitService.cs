@@ -1,6 +1,7 @@
 using SplitApi.Models;
 
 namespace SplitApi.Services;
+using SplitApi;
 
 // skaiciuoja skola grupeje is Transaction irasu
 // Positive - kiek man skolingi
@@ -36,4 +37,45 @@ public class SplitService
 
         return balances;
     }
+
+    // skaicuoja balansa itraukiant nauja mokejima
+    public Dictionary<int, decimal> CalculateBalances(Group group, SplitDto dto)
+    {
+        // visos senos tx po lygiai
+        var balances = CalculateBalances(group);
+        int count = group.Members.Count;
+
+        // naujas mokejimas pasirinktu budu
+        switch (dto.Mode)
+        {
+            case SplitMode.Equally:
+            {
+                decimal share = dto.Amount / count;
+                foreach (var m in group.Members)
+                {
+                    if (m.Id == dto.PayerId)
+                        balance[m.Id] += dto.Amount - share;
+                    else
+                        balances[m.Id] = share
+                }
+                break;
+            }
+
+            case SplitMode.ByPercent:
+            {
+                if (dto.Percentages == null || dto.Percentages.Keys.Except(group.Members.Select(m => m.Id)).Any() || Math.Abs(dto.Percentages.Values.Sum() - 100m) > 0.01m)
+                {
+                    throw new ArgumentException("Invalid Percentages for this group");
+                }
+                foreach (var m in group.Members)
+                {
+                    decimal pct = dto.Percentages[m.Id] / 100m;
+                    decimal share = dto.Amount * pct;
+                    if (m.Id == dto.PayerId)
+                }
+            }
+            
+        }
+    }
 }
+
