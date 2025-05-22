@@ -191,6 +191,22 @@ app.Run();
 
 // ------------DTO-------------
 public record MemberDto(string Name);
-public record TransactionDto(int PayerId, decimal Amount);
 public record GroupDto(string Title);
 public record SettleDto(int FromId, int ToId, decimal Amount);
+
+public enum SplitMode
+{
+    Equally, 
+    ByPercent,
+    Custom
+}
+
+public record TransactionDto(int PayerId, decimal Amount); // kol kas taip kad veiktu
+
+public record SplitDto(
+    int PayerId,
+    decimal Amount,
+    SplitMode Mode,
+    Dictionary<int, decimal>? Percentages = null, 
+    Dictionary<int, decimal>? Shares = null
+);
