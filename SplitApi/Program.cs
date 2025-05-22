@@ -92,6 +92,32 @@ app.MapPost("/groups/{id}/transactions", async (
         });
     });
 
+// ------------ GET /groups/{id}/balances ----------- irasom kas sumokejo
+app.MapGet("/groups/{id}/balances", async (
+    int id,
+    AppDbContext db,
+    SplitService splitter) =>
+    {
+        var group = await db.Groups
+                            .Include(g => g.Members)
+                            .Include(g => g.Transactions)
+                            .FirstOrDefaultAsync(g => g.Id == id);
+        
+        if (group is null)
+            return Results.NotFound("Group not found");
+
+        var bal = splitter.CalculateBalances(group);
+
+        var result = group.Members.Select(m => new
+        {
+            m.Id,
+            m.Name,
+            Balance = bal.GetValueOrDefault(m.Id, 0)
+        });
+
+        return Results.Ok(result);
+    });
+
 
 // paprastas testas
 app.MapGet("/weatherforecast", () => "ok");
