@@ -58,16 +58,16 @@ app.MapPost("/groups/{id}/members", async (
 
 
 // ------------ POST /groups/{id}/members ----------- irasom kas sumokejo
-app.MapPost("/gropus/{id}/transactions", async (
+app.MapPost("/groups/{id}/transactions", async (
     int id,
     TransactionDto dto,      // is public record - payerID, amount
-    AddDbContext db,
+    AppDbContext db,
     SplitService splitter) =>
     {
         // grupe su nariais + senomis transakciomis
         var group = await db.Groups
-                            .Include(g =>Members)
-                            .Include(g =>Transactions)
+                            .Include(g => g.Members)
+                            .Include(g => g.Transactions)
                             .FirstOrDefaultAsync(g => g.Id == id);
 
         if (group is null)
@@ -78,17 +78,17 @@ app.MapPost("/gropus/{id}/transactions", async (
             Amount = dto.Amount,
             PayerId = dto.PayerId,
             GroupId = id,
-            Date = DateTimeUtcNow
+            Date = DateTime.UtcNow
         };
         group.Transactions.Add(tx);
         await db.SaveChangesAsync();    // issaugau i In-memory DB
 
-        var balance = splitter.CalculateBalances(group);   // balanso skaiciuokle
+        var balances = splitter.CalculateBalances(group);   // balanso skaiciuokle
 
         return Results.Ok(new
         {
             transactionId = tx.Id,
-            balance
+            balances
         });
     });
 
