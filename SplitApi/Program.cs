@@ -1,9 +1,15 @@
 using Microsoft.OpenApi.Models;
+using Microsoft.EntityFrameworkCore;
+using SplitApi.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------ Swagger paslaugos ------------
 builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseInMemoryDatabase("split"));
+    
 builder.Services.AddSwaggerGen(cfg =>
 {
     cfg.SwaggerDoc("v1",
