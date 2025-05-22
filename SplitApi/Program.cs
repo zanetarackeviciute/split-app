@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using SplitApi.Data;
 using SplitApi.Models;
 using SplitApi.Services;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,7 +19,13 @@ builder.Services.AddDbContext<AppDbContext>(opt =>
     opt.UseInMemoryDatabase("split"));
 
 builder.Services.AddScoped<SplitService>();
-// -------------------------------------------
+
+builder.Services.ConfigureHttpJsonOptions(opts =>
+{
+    opts.SerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
+    opts.SerializerOptions.WriteIndented    = true;
+});
+
 
 var app = builder.Build();
 
@@ -138,6 +145,45 @@ app.MapGet("/groups/{id}/balances", async (
     });
 
 
+// ------------ POST /groups/{id}/settle ----------- vienas atsiskaito su kitu
+app.MapPost("/groups/{id}/settle", async (
+    int id,
+    SettleDto dto,
+    AppDbContext db,
+    SplitService splitter) =>
+    {
+        var group = await db.Groups    // suranda grupe su nariais ir transakcijom
+                            .Include(g => g.Members)
+                            .Include(g => g.Transactions)
+                            .FirstOrDefaultAsync(g => g.Id == id);
+        if (group is null)
+            return Results.NotFound("Group not found");
+
+        // ar abu yra grupeje
+        if (!group.Members.Any(m => m.Id == dto.FromId) || !group.Members.Any(m => m.Id == dto.ToId))
+            return Results.BadRequest("Member id not in this group");
+
+        // dirbtina transakcija
+        var tx = new Transaction
+        {
+            Amount = dto.Amount,
+            PayerId = dto.FromId,
+            GroupId = id,
+            Date = DateTime.UtcNow
+        };
+        group.Transactions.Add(tx);
+        await db.SaveChangesAsync();
+
+        var balances = splitter.CalculateBalances(group);
+
+        return Results.Ok(new
+        {
+            settleTransactionId = tx.Id,
+            balances
+        });
+    });
+
+
 // paprastas testas
 app.MapGet("/weatherforecast", () => "ok");
 
@@ -147,3 +193,4 @@ app.Run();
 public record MemberDto(string Name);
 public record TransactionDto(int PayerId, decimal Amount);
 public record GroupDto(string Title);
+public record SettleDto(int FromId, int ToId, decimal Amount);
