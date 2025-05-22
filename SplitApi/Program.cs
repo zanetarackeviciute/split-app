@@ -4,9 +4,6 @@ using SplitApi.Data;
 using SplitApi.Models;
 using SplitApi.Services;
 
-public record MemberDto(string Name);
-public record TransactionDto(int PayerId, decimal Amount);
-
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------ Swagger paslaugos ------------
@@ -55,11 +52,15 @@ app.MapPost("/groups/{id}/members", async (
     return Results.Created(
         $"/groups/{id}/members/{member.Id}",
         member
-    )
+    );
 }
-)
+);
 
 // paprastas testas
 app.MapGet("/weatherforecast", () => "ok");
 
 app.Run();
+
+// ------------DTO-------------
+public record MemberDto(string Name);
+public record TransactionDto(int PayerId, decimal Amount);
