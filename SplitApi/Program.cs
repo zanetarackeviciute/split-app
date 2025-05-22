@@ -1,20 +1,26 @@
 using Microsoft.OpenApi.Models;
 using Microsoft.EntityFrameworkCore;
 using SplitApi.Data;
+using SplitApi.Models;
+using SplitApi.Services;
+
+public record MemberDto(string Name);
+public record TransactionDto(int PayerId, decimal Amount);
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ------------ Swagger paslaugos ------------
 builder.Services.AddEndpointsApiExplorer();
-
-builder.Services.AddDbContext<AppDbContext>(opt =>
-    opt.UseInMemoryDatabase("split"));
-    
 builder.Services.AddSwaggerGen(cfg =>
 {
     cfg.SwaggerDoc("v1",
         new OpenApiInfo { Title = "Split API", Version = "v1" });
 });
+
+builder.Services.AddDbContext<AppDbContext>(opt =>
+    opt.UseInMemoryDatabase("split"));
+
+builder.Services.AddScoped<SplitService>();
 // -------------------------------------------
 
 var app = builder.Build();
@@ -23,6 +29,35 @@ var app = builder.Build();
 app.UseSwagger();      // JSON  → /swagger/v1/swagger.json
 app.UseSwaggerUI();    // HTML  → /swagger (+ /swagger/index.html)
 // -------------------------------------------
+
+// ------------ POST /groups/{id}/members ----------- irasom nauja nari
+app.MapPost("/groups/{id}/members", async (
+    int id,
+    MemberDto dto,
+    AppDbContext db) =>
+{
+    var group = await db.Groups
+                        .Include(g => g.Members)  // ikelia narius
+                        .FirstOrDefaultAsync(g => g.Id == id);
+
+    if (group is null)
+        return Results.NotFound("Group not found");
+
+    var member = new Member  // naujas narys
+    {
+        Name = dto.Name,
+        GroupId = id
+    };
+
+    group.Members.Add(member);
+    await db.SaveChangesAsync();  // issaugo bazeje
+
+    return Results.Created(
+        $"/groups/{id}/members/{member.Id}",
+        member
+    )
+}
+)
 
 // paprastas testas
 app.MapGet("/weatherforecast", () => "ok");
