@@ -56,6 +56,43 @@ app.MapPost("/groups/{id}/members", async (
 }
 );
 
+
+// ------------ POST /groups/{id}/members ----------- irasom kas sumokejo
+app.MapPost("/gropus/{id}/transactions", async (
+    int id,
+    TransactionDto dto,      // is public record - payerID, amount
+    AddDbContext db,
+    SplitService splitter) =>
+    {
+        // grupe su nariais + senomis transakciomis
+        var group = await db.Groups
+                            .Include(g =>Members)
+                            .Include(g =>Transactions)
+                            .FirstOrDefaultAsync(g => g.Id == id);
+
+        if (group is null)
+            return Results.NotFound("Group not found");
+
+        var tx = new Transaction      //naujas transaction objektas
+        {
+            Amount = dto.Amount,
+            PayerId = dto.PayerId,
+            GroupId = id,
+            Date = DateTimeUtcNow
+        };
+        group.Transactions.Add(tx);
+        await db.SaveChangesAsync();    // issaugau i In-memory DB
+
+        var balance = splitter.CalculateBalances(group);   // balanso skaiciuokle
+
+        return Results.Ok(new
+        {
+            transactionId = tx.Id,
+            balance
+        });
+    });
+
+
 // paprastas testas
 app.MapGet("/weatherforecast", () => "ok");
 
