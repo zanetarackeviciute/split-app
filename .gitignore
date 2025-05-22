@@ -1,0 +1,12 @@
+# .NET build
+bin/
+obj/
+
+# VS/VS Code user files
+.vscode/
+*.user
+*.suo
+
+# publish & secrets
+publish/
+appsettings.Development.json
