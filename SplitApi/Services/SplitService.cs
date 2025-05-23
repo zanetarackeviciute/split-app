@@ -54,9 +54,9 @@ public class SplitService
                 foreach (var m in group.Members)
                 {
                     if (m.Id == dto.PayerId)
-                        balance[m.Id] += dto.Amount - share;
+                        balances[m.Id] += dto.Amount - share;
                     else
-                        balances[m.Id] = share
+                        balances[m.Id] = share;
                 }
                 break;
             }
@@ -72,10 +72,34 @@ public class SplitService
                     decimal pct = dto.Percentages[m.Id] / 100m;
                     decimal share = dto.Amount * pct;
                     if (m.Id == dto.PayerId)
+                        balances[m.Id] += dto.Amount - share;
+                    else
+                        balances[m.Id] -= share;
                 }
+                break;
             }
             
+            case SplitMode.Custom:
+            {
+                if (dto.Shares == null || dto.Shares.Keys.Except(group.Members.Select(m => m.Id)).Any() || dto.Shares.Values.Sum() != dto.Amount)
+                {
+                    throw new ArgumentException("Invalid Shares for this group");
+                }
+                foreach (var m in group.Members)
+                {
+                    decimal share = dto.Shares[m.Id];
+                    if (m.Id == dto.PayerId)
+                        balances[m.Id] += dto.Amount - share;
+                    else
+                        balances[m.Id] -= share;
+                }
+                break;
+            }
+
+            default:
+                throw new ArgumentOutOfRangeException();
         }
+        return balances;
     }
 }
 
